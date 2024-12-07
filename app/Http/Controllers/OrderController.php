@@ -49,10 +49,31 @@ class OrderController extends Controller
     }
 
     public function agregarOrden(Request $request){
-
-        // dd($request->all());
+        $validatedData = $request->validate([
+            'numero_actuacion_notarial_cert_firma' => 'required|string|max:50',
+            'instrumento' => 'required|string|max:1',
+            'cualquier_pais' => 'required|string|max:1',
+            'paises_desc' => 'nullable|string|max:191',
+            'vigencia_hasta_mayoria_edad' => 'required|string|max:1',
+            'fecha_del_instrumento' => 'required|date',
+            'fecha_vigencia_desde' => 'required|date',
+            'fecha_vigencia_hasta' => 'required|date',
+            'notary_id' => 'required|integer',
+            'minor_id' => 'required|integer',
+            'autorizante1_id' => 'nullable|integer',
+            'autorizante2_id' => 'nullable|integer',
+            'serie_foja' => 'nullable|string|max:25',
+            'tipo_foja' => 'nullable|string|max:25',
+            'nro_foja' => 'nullable|string|max:50',
+            'authorizing_relatives_id' => 'nullable|integer',
+            'acompaneantes' => 'nullable|array',
+        ]);
+        
+        // Confirma los datos validados
+        // dd('Paso antes de crear la orden', $validatedData);
         /* Cargo una nueva solicitud con el menor y el notario */
-        $orden = Order::create($request->all());//aca lo creo
+        $orden = Order::create($validatedData);//aca lo creo
+
         $acompaneantes = $request->input('acompaneantes');
         // dd($acompaneantes);
         /* realizo la carga de los items */
