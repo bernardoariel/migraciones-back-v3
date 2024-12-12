@@ -48,131 +48,103 @@ class OrderController extends Controller
         return response()->json($ordenes::find($id),200);
     }
 
-    public function agregarOrden(Request $request){
-        $validatedData = $request->validate([
-            'numero_actuacion_notarial_cert_firma' => 'required|string|max:50',
-            'instrumento' => 'required|string|max:1',
-            'cualquier_pais' => 'required|string|max:1',
-            'paises_desc' => 'nullable|string|max:191',
-            'vigencia_hasta_mayoria_edad' => 'required|string|max:1',
-            'fecha_del_instrumento' => 'required|date',
-            'fecha_vigencia_desde' => 'required|date',
-            'fecha_vigencia_hasta' => 'required|date',
-            'notary_id' => 'required|integer',
-            'minor_id' => 'required|integer',
-            'autorizante1_id' => 'nullable|integer',
-            'autorizante2_id' => 'nullable|integer',
-            'serie_foja' => 'nullable|string|max:25',
-            'tipo_foja' => 'nullable|string|max:25',
-            'nro_foja' => 'nullable|string|max:50',
-            'authorizing_relatives_id' => 'nullable|integer',
-            'acompaneantes' => 'nullable|array',
-        ]);
-        
-        // Confirma los datos validados
-        // dd('Paso antes de crear la orden', $validatedData);
-        /* Cargo una nueva solicitud con el menor y el notario */
-        $orden = Order::create($validatedData);//aca lo creo
 
-        $acompaneantes = $request->input('acompaneantes');
-        // dd($acompaneantes);
-        /* realizo la carga de los items */
-        /* ============================= */
-        //Escribano ->>
-        $data = array(
-            "order_id"=> Order::latest()->first()->id,
-            "id_detalle"=> Order::latest()->first()->notary_id,
-            "nombre_tabla"=> "notaries",
-            "authorizing_relatives_id" => null,
-            "accreditation_links_id" => null,
-            "tipo"=> "escribano"
-        );
+    public function agregarOrden(Request $request)
+{
+    // Validar los datos enviados
+    $validatedData = $request->validate([
+        'numero_actuacion_notarial_cert_firma' => 'required|string|max:50',
+        'instrumento' => 'required|string|max:1',
+        'cualquier_pais' => 'required|string|max:1',
+        'paises_desc' => 'nullable|string|max:191',
+        'vigencia_hasta_mayoria_edad' => 'required|string|max:1',
+        'fecha_del_instrumento' => 'required|date',
+        'fecha_vigencia_desde' => 'required|date',
+        'fecha_vigencia_hasta' => 'required|date',
+        'notary_id' => 'required|integer',
+        'minor_id' => 'required|integer',
+        'autorizante1_id' => 'nullable|array', // Validar como objeto
+        'autorizante2_id' => 'nullable|array', // Validar como objeto
+        'acompaneantes' => 'nullable|array',
+        'serie_foja' => 'nullable|string|max:25',
+        'tipo_foja' => 'nullable|string|max:25',
+        'nro_foja' => 'nullable|string|max:50',
+    ]);
+
+    // Crear la orden principal
+    $orden = Order::create($validatedData);
+
+    // Agregar notario
+    $data = [
+        "order_id" => $orden->id,
+        "id_detalle" => $orden->notary_id,
+        "nombre_tabla" => "notaries",
+        "authorizing_relatives_id" => null,
+        "accreditation_links_id" => null,
+        "tipo" => "escribano"
+    ];
+    app(OrderItemController::class)->agregarOrdenItem($data);
+
+    // Agregar menor
+    $data = [
+        "order_id" => $orden->id,
+        "id_detalle" => $orden->minor_id,
+        "nombre_tabla" => "persons",
+        "authorizing_relatives_id" => null,
+        "accreditation_links_id" => null,
+        "tipo" => "menor"
+    ];
+    app(OrderItemController::class)->agregarOrdenItem($data);
+
+    // Agregar autorizante 1
+    if ($request->filled('autorizante1_id')) {
+        $autorizante1 = $request->input('autorizante1_id');
+        $data = [
+            "order_id" => $orden->id,
+            "id_detalle" => $autorizante1['id'],
+            "nombre_tabla" => "persons",
+            "authorizing_relatives_id" => $autorizante1['authorizing_relatives_id'] ?? null,
+            "accreditation_links_id" => $autorizante1['accreditation_links_id'] ?? null,
+            "tipo" => "autorizante"
+        ];
         app(OrderItemController::class)->agregarOrdenItem($data);
-
-        //Menor ->
-        $data = array(
-            "order_id"=> Order::latest()->first()->id,
-            "id_detalle"=> Order::latest()->first()->minor_id,
-            "nombre_tabla"=> "persons",
-            "authorizing_relatives_id" => null,
-            "accreditation_links_id" => null,
-            "tipo" => 'menor'
-        );
-        app(OrderItemController::class)->agregarOrdenItem($data);
-
-        //Autorizante 1 ->>
-        if($request->autorizante1_id){
-            $autorizante = Person::find($request->autorizante1_id);
-
-            $data = array(
-                "order_id"=> Order::latest()->first()->id,
-                "id_detalle"=> $request->autorizante1_id,
-                "nombre_tabla"=> "persons",
-                "authorizing_relatives_id" => $autorizante->authorizing_relatives_id,
-                "accreditation_links_id" => $autorizante->accreditation_links_id,
-                "tipo" => 'autorizante'
-            );
-
-            app(OrderItemController::class)->agregarOrdenItem($data);
-        }
-
-        //Autorizante 2 ->>
-        if($request->autorizante2_id){
-            $autorizante2 = Person::find($request->autorizante2_id);
-
-            $data = array(
-                "order_id"=> Order::latest()->first()->id,
-                "id_detalle"=> $request->autorizante2_id,
-                "nombre_tabla"=> "persons",
-                "authorizing_relatives_id" => $autorizante2->authorizing_relatives_id,
-                "accreditation_links_id" => $autorizante2->accreditation_links_id,
-                "tipo" => 'autorizante'
-            );
-            app(OrderItemController::class)->agregarOrdenItem($data);
-        }
-            foreach ($acompaneantes as $acompaneante) {
-
-                $acompaneante = Person::find($acompaneante['id']);
-                $data = array(
-                    "order_id"=> Order::latest()->first()->id,
-                    "id_detalle"=> $acompaneante['id'],
-                    "nombre_tabla"=> "persons",
-                    "authorizing_relatives_id" => $acompaneante->authorizing_relatives_id,
-                    "accreditation_links_id" => $acompaneante->accreditation_links_id,
-                    "tipo" => 'acompaneante'
-                );
-                app(OrderItemController::class)->agregarOrdenItem($data);
-                // Hacer lo que necesites con cada acompañante aquí
-            }
-        $items = OrderItems::where('order_id',Order::latest()->first()->id)->get();
-
-          foreach ($items as $item) {
-            // Acceder a los atributos de cada elemento en la colección
-            $id = $item->id;
-            $order_id = $item->order_id;
-            $id_detalle = $item->id_detalle;
-            $nombre_tabla = $item->nombre_tabla;
-            $created_at = $item->created_at;
-            $updated_at = $item->updated_at;
-            $authorizing_relatives_id = $item->authorizing_relatives_id;
-            $accreditation_links_id = $item->accreditation_links_id;
-            $tipo = $item->tipo;
-
-            // Hacer lo que necesites con cada elemento aquí
-            if($nombre_tabla=='persons'){
-                $person = Person::where('id',  $id_detalle)->first();
-                if ($person) {
-                    $person->authorizing_relatives_id = null;
-                    $person->accreditation_links_id = null;
-                    $person->save();
-                }
-            }
-
-        }
-
-       return response($orden,200);
-
     }
+
+    // Agregar autorizante 2
+    if ($request->filled('autorizante2_id')) {
+        $autorizante2 = $request->input('autorizante2_id');
+        $data = [
+            "order_id" => $orden->id,
+            "id_detalle" => $autorizante2['id'],
+            "nombre_tabla" => "persons",
+            "authorizing_relatives_id" => $autorizante2['authorizing_relatives_id'] ?? null,
+            "accreditation_links_id" => $autorizante2['accreditation_links_id'] ?? null,
+            "tipo" => "autorizante"
+        ];
+        app(OrderItemController::class)->agregarOrdenItem($data);
+    }
+
+    // Agregar acompañantes
+    $acompaneantes = $request->input('acompaneantes', []);
+    foreach ($acompaneantes as $acompaneante) {
+        $data = [
+            "order_id" => $orden->id,
+            "id_detalle" => $acompaneante['id'],
+            "nombre_tabla" => "persons",
+            "authorizing_relatives_id" => null, // Puedes ajustarlo si los acompañantes tienen estas propiedades
+            "accreditation_links_id" => null,
+            "tipo" => "acompaneante"
+        ];
+        app(OrderItemController::class)->agregarOrdenItem($data);
+    }
+
+    return response()->json([
+        'message' => 'Orden creada exitosamente',
+        'orden' => $orden,
+    ], 201);
+}
+
+
     public function actualizarOrden(Request $request, $id){
 
         $orden = Order::find($id);
