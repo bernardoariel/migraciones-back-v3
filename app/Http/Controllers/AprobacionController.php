@@ -21,10 +21,10 @@ use SoapClient;
 class AprobacionController extends Controller
 {
     public function solicitar(Request $request){
-        // echo $request->id;
+         echo $request->id;
         /* aca tenemos que formar la data para hacer el pedido en index */
 
-         AprobacionController::index($request->id);
+         //AprobacionController::index($request->id);
     }
 
     public function index($id_solicitud){

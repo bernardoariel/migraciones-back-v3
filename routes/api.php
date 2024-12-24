@@ -96,6 +96,7 @@ Route::delete('eliminarautorizante/{id}','App\Http\Controllers\AuthorizationsCon
 // Route::post('login', 'AuthController@login');
 Route::post('login', 'App\Http\Controllers\LoginController@login');
 Route::post('agregarUsuario', 'App\Http\Controllers\LoginController@registrarUsuario');
+Route::post('/forgot-password', 'App\Http\Controllers\LoginController@forgotPassword');
 
 /* ROUTE::get */
 Route::get('tipocompania','App\Http\Controllers\CompanionTypeController@getAcompaniantes');

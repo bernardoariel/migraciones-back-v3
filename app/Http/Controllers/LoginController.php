@@ -1,65 +1,100 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Notary;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class LoginController extends Controller
 {
-    // Método principal del controlador
     public function login(Request $request)
     {
-        $currentTime = time();
-        $expiryTime = $currentTime + 3600; // suma 3600 segundos al tiempo actual
-        $expiryDate = number_format($expiryTime, 0, '', '');// convierte el timestamp en una fecha formateada
-
         // Validar los datos del formulario
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|min:6',
         ]);
 
-        // Buscar al usuario en la base de datos
-        $user = Notary::where('email', $request->email)->first();
-        // Verificar si el usuario existe y si la contraseña es correcta
-
-        if ( $user ) {
-            // Crear un nuevo token de acceso
-            $userId = $user->id;
-            // dd($userId);
-
-            $accessToken = $user->createToken('authToken', ['user_id' => $userId])->accessToken;
-
-            // Crear una respuesta JSON
-            $response = response()->json([
-                'user' => $user,
-                'access_token' => $accessToken->token,
-                'expiry_date' => $expiryDate,
-
-            ], 200, [], JSON_PRETTY_PRINT)
-            ->withHeaders([
-                'expiry_date' => $expiryDate,
-            ]);
-
-            return $response;
-
-            } else {
-
-                // Devolver un mensaje de error si el usuario no existe o la contraseña es incorrecta
-                return response()->json([
-                    'error' => 'The email or password is incorrect',
-                ], 401);
-
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
         }
 
-}
-public function registrarUsuario(Request $request){
-    $usuario = User::create($request->all());
-    return response($usuario,200);
-}
+        // Buscar al usuario en la base de datos
+        $user = Notary::where('email', $request->email)->first();
+
+        if ($user && Hash::check($request->password, $user->password)) {
+            // Generar un token de acceso
+            $accessToken = $user->createToken('authToken')->plainTextToken;
+
+            return response()->json([
+                'user' => $user,
+                'access_token' => $accessToken,
+                'expiry_date' => now()->addHour()->toDateTimeString(),
+            ], 200);
+        } else {
+            return response()->json([
+                'error' => 'The email or password is incorrect',
+            ], 401);
+        }
+    }
+    public function forgotPassword(Request $request)
+    {
+        // Validar el campo "identifier" (puede ser email o matrícula)
+        $validator = Validator::make($request->all(), [
+            'identifier' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()], 422);
+        }
+
+        // Buscar al usuario por email o matrícula
+        $identifier = $request->identifier;
+        $user = Notary::where('email', $identifier)
+            ->orWhere('matricula', $identifier)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'error' => 'No se encontró ningún usuario con ese email o matrícula.',
+            ], 404);
+        }
+
+        // Generar una nueva contraseña aleatoria
+        $newPassword = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 10);
+
+        // Actualizar la contraseña en la base de datos (encriptada)
+        $user->password = Hash::make($newPassword);
+        $user->save();
+
+        // Generar el contenido del correo como cadena HTML
+        $htmlContent = "
+            <h1>Hola {$user->nombre} {$user->apellido}</h1>
+            <p>Hemos generado una nueva contraseña para tu cuenta:</p>
+            <p><strong>Contraseña: {$newPassword}</strong></p>
+            <p>Por favor, inicia sesión con esta nueva contraseña y cámbiala lo antes posible.</p>
+            <br>
+            <p>Atentamente,</p>
+            <p>El equipo de Escribanía</p>
+        ";
+
+        // Enviar el correo electrónico
+        try {
+            Mail::html($htmlContent, function ($message) use ($user) {
+                $message->to($user->email)
+                    ->subject('Recuperación de Contraseña');
+            });
+
+            return response()->json([
+                'message' => 'Se envió un correo con la nueva contraseña.',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'No se pudo enviar el correo. Intente nuevamente más tarde.',
+            ], 500);
+        }
+    }
 
 }
