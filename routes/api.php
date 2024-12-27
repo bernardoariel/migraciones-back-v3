@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::middleware('auth:sanctum')->get('/me', 'App\Http\Controllers\LoginController@me');
 
 // Route::get('soap',[probandoSoap::class,'index']);
 Route::post('soap/{id}','App\Http\Controllers\AprobacionController@solicitar');

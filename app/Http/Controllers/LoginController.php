@@ -96,5 +96,10 @@ class LoginController extends Controller
             ], 500);
         }
     }
+    public function me(Request $request)
+    {
+        $user = $request->user(); // Obtiene el usuario autenticado
+        return response()->json(['user' => $user], 200);
+    }
 
 }
