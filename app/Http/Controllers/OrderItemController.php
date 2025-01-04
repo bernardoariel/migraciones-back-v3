@@ -24,17 +24,22 @@ class OrderItemController extends Controller
     }
 
 
-    public function getOrdenItemBsq(Request $request){
+    public function getOrdenItemBsq(Request $request)
+    {
+        try {
+            $registros = DB::table('order_items')
+                ->select('id_detalle', 'authorizing_relatives_id', 'accreditation_links_id')
+                ->where('order_id', $request->order_id)
+                ->where('tipo', 'autorizante')
+                ->where('id_detalle', $request->person_id)
+                ->get();
 
-        $registros = DB::table('order_items')
-            ->where('order_id',$request->order_id)
-            // ->where('id_detalle',$request->id_detalle)
-            ->where('nombre_tabla',$request->nombre_tabla)
-            ->get();
-            // echo count($registros);
-            return response()->json($registros,200);
-
+            return response()->json($registros);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
+
     public function getOrdenItemBsq2($id){
 
         $registros = DB::table('order_items')
