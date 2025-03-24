@@ -48,7 +48,11 @@ class OrderController extends Controller
         return response()->json($ordenes::find($id),200);
     }
 
-
+    public function getOrdenesPorNotario($id)
+    {
+        $ordenes = Order::where('notary_id', $id)->get(); // Asegúrate de que el modelo tenga la relación con notary_id
+        return response()->json($ordenes);
+    }
     public function agregarOrden(Request $request)
 {
     // Validar los datos enviados

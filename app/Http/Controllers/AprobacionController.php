@@ -33,15 +33,15 @@ class AprobacionController extends Controller
         $data = [];
         /* agregando url a data */
         /* prueba */
-        /* $data_url = [
+        $data_url = [
 
             'location' => 'https://www.dnmservices.gob.ar/wsAutorizacionViajeTest/wsAutorizacionViaje.php?wsdl',
 
-        ]; */
-        /* produccion */
-        $data_url = [
-            'location' =>'https://www.dnmservices.gob.ar/wsAutorizacionViaje/wsAutorizacionViaje.php?wsdl',
         ];
+        /* produccion */
+      /*   $data_url = [
+            'location' =>'https://www.dnmservices.gob.ar/wsAutorizacionViaje/wsAutorizacionViaje.php?wsdl',
+        ]; */
         $data = array_merge($data, $data_url);
 
         $solicitud = Order::find($id_solicitud);

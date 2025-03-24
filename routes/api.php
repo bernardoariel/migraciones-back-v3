@@ -119,3 +119,4 @@ Route::post('v2/agregarorden','App\Http\Controllers\OrderController@agregarOrden
 Route::get('v2/ordenestodos','App\Http\Controllers\OrderController@getOrdenesTodos');
 Route::post('v2/soap/{id}','App\Http\Controllers\AprobacionController@solicitar');
 Route::get('v2/orden/{id}','App\Http\Controllers\OrderController@getOrdenId');
+Route::get('v2/ordenes/notary/{id}', 'App\Http\Controllers\OrderController@getOrdenesPorNotario');
